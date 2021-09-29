@@ -18,7 +18,7 @@ namespace VeeamFileHash
         private int OptimalReadBlockSize => Math.Max(Configuration.OptimalReadBlockSize, HashBlockSize);
         private int OptimalThreadCount => Configuration.OptimalThreadCount;
         private long FileSize => new FileInfo(FileName).Length;
-        private int FileReadBlockSize => HashBlockSize * (OptimalReadBlockSize / HashBlockSize);
+        private long FileReadBlockSize => Math.Min(HashBlockSize * (OptimalReadBlockSize / HashBlockSize), FileSize);
 
         public HashAnalizer(string fileName, int hashBlockSize)
         {
@@ -80,9 +80,10 @@ namespace VeeamFileHash
                         {
                             var readBlockNum = readingBlocks.Take();
                             var buf = new byte[FileReadBlockSize];
-                            fileStream.Seek(readBlockNum * (long)FileReadBlockSize, SeekOrigin.Begin);
-                            fileStream.Read(buf, 0, FileReadBlockSize);
-                            var hashBlocksReadCount = FileReadBlockSize / HashBlockSize;
+                            var readBlockSize = (int)FileReadBlockSize;
+                            fileStream.Seek(readBlockNum * FileReadBlockSize, SeekOrigin.Begin);
+                            fileStream.Read(buf, 0, readBlockSize);
+                            var hashBlocksReadCount = readBlockSize / HashBlockSize;
                             for (var idx = 0; idx < hashBlocksReadCount; idx++)
                             {
                                 var hash = sha256.ComputeHash(buf, HashBlockSize * idx, HashBlockSize);
